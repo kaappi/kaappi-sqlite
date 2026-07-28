@@ -46,6 +46,7 @@
 (check (sqlite-convert-param 3.14)    => "3.14")
 (check (sqlite-convert-param #t)      => "1")
 (check (sqlite-convert-param #f)      => #f)
+(check (sqlite-convert-param '())     => #f)
 
 ;; --- Summary ---
 

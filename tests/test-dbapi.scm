@@ -73,10 +73,43 @@
   (check (vector-ref (car rows) 0) => #f)
   (check (vector-ref (car rows) 1) => #f))
 
+;; '() is also accepted as a NULL bind parameter, same as #f (issue #1745)
+(sqlite-exec db "INSERT INTO users (name, age, score) VALUES (?, ?, ?)" "Eve" '() '())
+(let ((rows (sqlite-query db "SELECT age, score FROM users WHERE name = ?" "Eve")))
+  (check (length rows) => 1)
+  (check (vector-ref (car rows) 0) => #f)
+  (check (vector-ref (car rows) 1) => #f))
+
 ;; --- UPDATE + rowcount ---
 (display "UPDATE\n")
 (let ((n (sqlite-exec db "UPDATE users SET age = ? WHERE name = ?" 31 "Alice")))
   (check n => 1))
+
+;; --- Cursor UPDATE/DELETE apply immediately, without a fetch (issue #1745) ---
+;; A cursor's sqlite-execute must run non-row-producing statements right
+;; away: nothing ever calls sqlite-fetchone on an UPDATE/DELETE, so a
+;; "step lazily on first fetch" design would silently never run it.
+(display "Cursor UPDATE without fetch\n")
+(let ((cur (sqlite-cursor db)))
+  (sqlite-execute cur "UPDATE users SET age = ? WHERE name = ?" 40 "Bob")
+  (check (sqlite-rowcount cur) => 1)
+  (sqlite-cursor-close cur))
+(let ((rows (sqlite-query db "SELECT age FROM users WHERE name = ?" "Bob")))
+  (check (vector-ref (car rows) 0) => 40))
+
+(display "Cursor UPDATE matching no rows\n")
+(let ((cur (sqlite-cursor db)))
+  (sqlite-execute cur "UPDATE users SET age = ? WHERE name = ?" 99 "Nobody")
+  (check (sqlite-rowcount cur) => 0)
+  (sqlite-cursor-close cur))
+
+(display "Cursor DELETE without fetch\n")
+(let ((cur (sqlite-cursor db)))
+  (sqlite-execute cur "DELETE FROM users WHERE name = ?" "Eve")
+  (check (sqlite-rowcount cur) => 1)
+  (sqlite-cursor-close cur))
+(let ((rows (sqlite-query db "SELECT * FROM users WHERE name = ?" "Eve")))
+  (check (length rows) => 0))
 
 ;; --- Description ---
 (display "Description\n")

@@ -18,6 +18,7 @@
     (define (sqlite-convert-param value)
       (cond
         ((eq? value #f) #f)
+        ((null? value) #f)
         ((eq? value #t) "1")
         ((string? value) value)
         ((number? value) (number->string value))

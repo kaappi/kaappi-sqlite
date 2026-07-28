@@ -55,7 +55,7 @@ Requires SQLite3 development libraries:
 
 ```scheme
 (sqlite-cursor conn)                    ; create cursor
-(sqlite-execute cursor sql params...)   ; prepare and bind
+(sqlite-execute cursor sql params...)   ; prepare, bind, and run (rows are fetched lazily; non-row statements run immediately)
 (sqlite-fetchone cursor)                ; next row as vector, or #f
 (sqlite-fetchall cursor)                ; remaining rows as list
 (sqlite-description cursor)             ; column names
@@ -77,6 +77,7 @@ Parameters use `?` placeholders. Types are preserved:
 ```scheme
 (sqlite-exec db "INSERT INTO t VALUES (?, ?, ?)" 42 3.14 "hello")
 (sqlite-exec db "INSERT INTO t VALUES (?, ?)" #f #t)  ; #f=NULL, #t=1
+(sqlite-exec db "INSERT INTO t VALUES (?)" '())        ; '() is also accepted as NULL
 ```
 
 ## Type mapping
