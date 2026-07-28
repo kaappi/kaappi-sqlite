@@ -78,9 +78,19 @@
           (set-cursor-stmt! cursor stmt)
           (let ((ncols (%sqlite-column-count stmt)))
             (set-cursor-ncols! cursor ncols)
-            (set-cursor-done?! cursor #f)
             ;; Cache column types after first step if it's a query
-            (set-cursor-types! cursor '())))))
+            (set-cursor-types! cursor '())
+            (if (= ncols 0)
+                ;; No result columns means this statement never produces
+                ;; rows (INSERT/UPDATE/DELETE/DDL), so nothing will ever
+                ;; call sqlite-fetchone to drive it. Step it now, or the
+                ;; statement — and any write it makes — never runs, while
+                ;; sqlite-rowcount goes on reporting stale changes from
+                ;; whatever statement last actually ran.
+                (begin
+                  (%sqlite-step stmt)
+                  (set-cursor-done?! cursor #t))
+                (set-cursor-done?! cursor #f))))))
 
     ;; --- Fetch ---
 
